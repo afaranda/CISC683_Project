@@ -1,0 +1,435 @@
+{
+    "report_general_stats_headers": [
+        {
+            "percent_assigned": {
+                "dmin": 0.0,
+                "format": "{:,.1f}",
+                "minRange": null,
+                "namespace": "HTSeq Count",
+                "description": "% Assigned reads",
+                "colour": "55,126,184",
+                "dmax": 100.0,
+                "suffix": "%",
+                "shared_key": null,
+                "placement": 1000.0,
+                "title": "% Assigned",
+                "scale": "RdYlGn",
+                "rid": "mqc-generalstats-htseq_count-percent_assigned",
+                "min": 0,
+                "max": 100,
+                "modify": null,
+                "hidden": null,
+                "floor": null,
+                "ceiling": null
+            },
+            "assigned": {
+                "dmin": 0.0,
+                "format": "{:,.1f}",
+                "minRange": null,
+                "ceiling": null,
+                "shared_key": "read_count",
+                "description": "Assigned Reads (millions)",
+                "colour": "55,126,184",
+                "dmax": 23.048157,
+                "namespace": "HTSeq Count",
+                "placement": 1000.0,
+                "title": "M Assigned",
+                "scale": "PuBu",
+                "rid": "mqc-generalstats-htseq_count-assigned",
+                "min": 0,
+                "max": null,
+                "hidden": null,
+                "floor": null,
+                "modify": 1e-06
+            }
+        }
+    ],
+    "config_short_version": "1.7",
+    "config_analysis_dir_abs": [
+        "/work/abf/LEC_Time_Series/DNA_Link_HTSeq_Count"
+    ],
+    "config_report_comment": null,
+    "config_report_header_info": null,
+    "config_subtitle": null,
+    "config_script_path": "/home/abf/.local/lib/python3.5/site-packages/multiqc/utils",
+    "report_data_sources": {},
+    "config_git_hash": null,
+    "config_title": null,
+    "config_analysis_dir": [
+        "."
+    ],
+    "report_multiqc_command": "/home/abf/.local/bin/multiqc .",
+    "report_plot_data": {
+        "htseq_assignment_plot": {
+            "config": {
+                "hide_zero_cats": false,
+                "ylab": "# Reads",
+                "title": "HTSeq: Count Assignments",
+                "id": "htseq_assignment_plot",
+                "cpswitch_counts_label": "Number of Reads"
+            },
+            "plot_type": "bar_graph",
+            "samples": [
+                [
+                    "B8_0_hr_1_S9_Pos_GeneCount",
+                    "B8_0_hr_4_S11_Pos_GeneCount",
+                    "B8_24hr_1_S12_Pos_GeneCount",
+                    "B8_24hr_2_S13_Pos_GeneCount",
+                    "B8_24hr_3_S14_Pos_GeneCount",
+                    "WT_0_hr_1_S1_Pos_GeneCount",
+                    "WT_0_hr_3_S3_Pos_GeneCount",
+                    "WT_24_hr_1_S6_Pos_GeneCount",
+                    "WT_6_hr_2_S5_Pos_GeneCount",
+                    "WT_6_hr_3_S15_Pos_GeneCount"
+                ]
+            ],
+            "datasets": [
+                [
+                    {
+                        "data": [
+                            19446934.0,
+                            21133333.0,
+                            22116428.0,
+                            19330092.0,
+                            21759163.0,
+                            21390472.0,
+                            20279076.0,
+                            23048157.0,
+                            22511287.0,
+                            19067997.0
+                        ],
+                        "name": "Assigned"
+                    },
+                    {
+                        "data": [
+                            377458.0,
+                            397800.0,
+                            411624.0,
+                            384794.0,
+                            473659.0,
+                            436897.0,
+                            396367.0,
+                            490387.0,
+                            465781.0,
+                            388660.0
+                        ],
+                        "name": "Ambiguous"
+                    },
+                    {
+                        "data": [
+                            1167281.0,
+                            1230085.0,
+                            1352191.0,
+                            1071740.0,
+                            1301145.0,
+                            1070008.0,
+                            945643.0,
+                            1131658.0,
+                            1387822.0,
+                            1153746.0
+                        ],
+                        "name": "Alignment Not Unique"
+                    },
+                    {
+                        "data": [
+                            5611839.0,
+                            6385105.0,
+                            7017241.0,
+                            6696284.0,
+                            5507773.0,
+                            7580244.0,
+                            9346150.0,
+                            6227827.0,
+                            7963756.0,
+                            6466977.0
+                        ],
+                        "name": "No Feature"
+                    },
+                    {
+                        "data": [
+                            1581683.0,
+                            1869638.0,
+                            1852832.0,
+                            1609490.0,
+                            1782816.0,
+                            1759321.0,
+                            1683368.0,
+                            1631722.0,
+                            1895743.0,
+                            1531888.0
+                        ],
+                        "name": "Too Low aQual"
+                    },
+                    {
+                        "data": [
+                            19483898.0,
+                            18231265.0,
+                            18612471.0,
+                            15557835.0,
+                            17663403.0,
+                            22418509.0,
+                            18108741.0,
+                            21559060.0,
+                            22694933.0,
+                            18383566.0
+                        ],
+                        "name": "Not Aligned"
+                    }
+                ]
+            ]
+        }
+    },
+    "config_creation_date": "2019-04-28, 22:56",
+    "report_general_stats_data": [
+        {
+            "WT_6_hr_3_S15_Pos_GeneCount": {
+                "too_low_aQual": 1531888,
+                "alignment_not_unique": 1153746,
+                "not_aligned": 18383566,
+                "percent_assigned": 40.57639298791811,
+                "no_feature": 6466977,
+                "assigned": 19067997,
+                "total_count": 46992834,
+                "ambiguous": 388660
+            },
+            "WT_24_hr_1_S6_Pos_GeneCount": {
+                "too_low_aQual": 1631722,
+                "alignment_not_unique": 1131658,
+                "not_aligned": 21559060,
+                "percent_assigned": 42.611690983556656,
+                "no_feature": 6227827,
+                "assigned": 23048157,
+                "total_count": 54088811,
+                "ambiguous": 490387
+            },
+            "B8_0_hr_1_S9_Pos_GeneCount": {
+                "too_low_aQual": 1581683,
+                "alignment_not_unique": 1167281,
+                "not_aligned": 19483898,
+                "percent_assigned": 40.795687050307414,
+                "no_feature": 5611839,
+                "assigned": 19446934,
+                "total_count": 47669093,
+                "ambiguous": 377458
+            },
+            "B8_24hr_1_S12_Pos_GeneCount": {
+                "too_low_aQual": 1852832,
+                "alignment_not_unique": 1352191,
+                "not_aligned": 18612471,
+                "percent_assigned": 43.05924442924018,
+                "no_feature": 7017241,
+                "assigned": 22116428,
+                "total_count": 51362787,
+                "ambiguous": 411624
+            },
+            "WT_0_hr_3_S3_Pos_GeneCount": {
+                "too_low_aQual": 1683368,
+                "alignment_not_unique": 945643,
+                "not_aligned": 18108741,
+                "percent_assigned": 39.95141387265734,
+                "no_feature": 9346150,
+                "assigned": 20279076,
+                "total_count": 50759345,
+                "ambiguous": 396367
+            },
+            "B8_24hr_3_S14_Pos_GeneCount": {
+                "too_low_aQual": 1782816,
+                "alignment_not_unique": 1301145,
+                "not_aligned": 17663403,
+                "percent_assigned": 44.875394734597926,
+                "no_feature": 5507773,
+                "assigned": 21759163,
+                "total_count": 48487959,
+                "ambiguous": 473659
+            },
+            "B8_24hr_2_S13_Pos_GeneCount": {
+                "too_low_aQual": 1609490,
+                "alignment_not_unique": 1071740,
+                "not_aligned": 15557835,
+                "percent_assigned": 43.29225142935978,
+                "no_feature": 6696284,
+                "assigned": 19330092,
+                "total_count": 44650235,
+                "ambiguous": 384794
+            },
+            "B8_0_hr_4_S11_Pos_GeneCount": {
+                "too_low_aQual": 1869638,
+                "alignment_not_unique": 1230085,
+                "not_aligned": 18231265,
+                "percent_assigned": 42.912737866697306,
+                "no_feature": 6385105,
+                "assigned": 21133333,
+                "total_count": 49247226,
+                "ambiguous": 397800
+            },
+            "WT_0_hr_1_S1_Pos_GeneCount": {
+                "too_low_aQual": 1759321,
+                "alignment_not_unique": 1070008,
+                "not_aligned": 22418509,
+                "percent_assigned": 39.136941711449786,
+                "no_feature": 7580244,
+                "assigned": 21390472,
+                "total_count": 54655451,
+                "ambiguous": 436897
+            },
+            "WT_6_hr_2_S5_Pos_GeneCount": {
+                "too_low_aQual": 1895743,
+                "alignment_not_unique": 1387822,
+                "not_aligned": 22694933,
+                "percent_assigned": 39.54946441561619,
+                "no_feature": 7963756,
+                "assigned": 22511287,
+                "total_count": 56919322,
+                "ambiguous": 465781
+            }
+        }
+    ],
+    "config_version": "1.7",
+    "config_intro_text": null,
+    "report_saved_raw_data": {
+        "multiqc_general_stats": {
+            "WT_6_hr_3_S15_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 40.57639298791811,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 19067997
+            },
+            "WT_0_hr_1_S1_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 39.136941711449786,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 21390472
+            },
+            "WT_24_hr_1_S6_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 42.611690983556656,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 23048157
+            },
+            "B8_0_hr_1_S9_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 40.795687050307414,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 19446934
+            },
+            "B8_24hr_1_S12_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 43.05924442924018,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 22116428
+            },
+            "WT_0_hr_3_S3_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 39.95141387265734,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 20279076
+            },
+            "B8_24hr_3_S14_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 44.875394734597926,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 21759163
+            },
+            "B8_24hr_2_S13_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 43.29225142935978,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 19330092
+            },
+            "B8_0_hr_4_S11_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 42.912737866697306,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 21133333
+            },
+            "WT_6_hr_2_S5_Pos_GeneCount": {
+                "HTSeq Count_mqc-generalstats-htseq_count-percent_assigned": 39.54946441561619,
+                "HTSeq Count_mqc-generalstats-htseq_count-assigned": 22511287
+            }
+        },
+        "multiqc_htseq": {
+            "WT_6_hr_3_S15_Pos_GeneCount": {
+                "too_low_aQual": 1531888,
+                "alignment_not_unique": 1153746,
+                "not_aligned": 18383566,
+                "percent_assigned": 40.57639298791811,
+                "no_feature": 6466977,
+                "assigned": 19067997,
+                "total_count": 46992834,
+                "ambiguous": 388660
+            },
+            "WT_24_hr_1_S6_Pos_GeneCount": {
+                "too_low_aQual": 1631722,
+                "alignment_not_unique": 1131658,
+                "not_aligned": 21559060,
+                "percent_assigned": 42.611690983556656,
+                "no_feature": 6227827,
+                "assigned": 23048157,
+                "total_count": 54088811,
+                "ambiguous": 490387
+            },
+            "B8_0_hr_1_S9_Pos_GeneCount": {
+                "too_low_aQual": 1581683,
+                "alignment_not_unique": 1167281,
+                "not_aligned": 19483898,
+                "percent_assigned": 40.795687050307414,
+                "no_feature": 5611839,
+                "assigned": 19446934,
+                "total_count": 47669093,
+                "ambiguous": 377458
+            },
+            "B8_24hr_1_S12_Pos_GeneCount": {
+                "too_low_aQual": 1852832,
+                "alignment_not_unique": 1352191,
+                "not_aligned": 18612471,
+                "percent_assigned": 43.05924442924018,
+                "no_feature": 7017241,
+                "assigned": 22116428,
+                "total_count": 51362787,
+                "ambiguous": 411624
+            },
+            "WT_0_hr_3_S3_Pos_GeneCount": {
+                "too_low_aQual": 1683368,
+                "alignment_not_unique": 945643,
+                "not_aligned": 18108741,
+                "percent_assigned": 39.95141387265734,
+                "no_feature": 9346150,
+                "assigned": 20279076,
+                "total_count": 50759345,
+                "ambiguous": 396367
+            },
+            "B8_24hr_3_S14_Pos_GeneCount": {
+                "too_low_aQual": 1782816,
+                "alignment_not_unique": 1301145,
+                "not_aligned": 17663403,
+                "percent_assigned": 44.875394734597926,
+                "no_feature": 5507773,
+                "assigned": 21759163,
+                "total_count": 48487959,
+                "ambiguous": 473659
+            },
+            "B8_24hr_2_S13_Pos_GeneCount": {
+                "too_low_aQual": 1609490,
+                "alignment_not_unique": 1071740,
+                "not_aligned": 15557835,
+                "percent_assigned": 43.29225142935978,
+                "no_feature": 6696284,
+                "assigned": 19330092,
+                "total_count": 44650235,
+                "ambiguous": 384794
+            },
+            "B8_0_hr_4_S11_Pos_GeneCount": {
+                "too_low_aQual": 1869638,
+                "alignment_not_unique": 1230085,
+                "not_aligned": 18231265,
+                "percent_assigned": 42.912737866697306,
+                "no_feature": 6385105,
+                "assigned": 21133333,
+                "total_count": 49247226,
+                "ambiguous": 397800
+            },
+            "WT_0_hr_1_S1_Pos_GeneCount": {
+                "too_low_aQual": 1759321,
+                "alignment_not_unique": 1070008,
+                "not_aligned": 22418509,
+                "percent_assigned": 39.136941711449786,
+                "no_feature": 7580244,
+                "assigned": 21390472,
+                "total_count": 54655451,
+                "ambiguous": 436897
+            },
+            "WT_6_hr_2_S5_Pos_GeneCount": {
+                "too_low_aQual": 1895743,
+                "alignment_not_unique": 1387822,
+                "not_aligned": 22694933,
+                "percent_assigned": 39.54946441561619,
+                "no_feature": 7963756,
+                "assigned": 22511287,
+                "total_count": 56919322,
+                "ambiguous": 465781
+            }
+        }
+    }
+}
