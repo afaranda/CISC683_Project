@@ -58,7 +58,7 @@ df, idCol=1, threshold=10,
 mode='absolute', decreasing=T
 
 ){
-    idCol<-ifelse(is.character(idCol), colNum(x, idCol), idCol)
+    idCol<-ifelse(is.character(idCol), colNum(df, idCol), idCol)
     df$TotalVar <-apply(df[,setdiff(1:ncol(x), idCol)], 1, var, na.rm=T)
     tvCol<-grep('TotalVar', names(df))
     if(!mode %in% c('absolute', 'percent')){
@@ -147,7 +147,7 @@ wrapCombat<-function(df, ft, groupCol=3, batchCol=4, idCol=1){
 
 wrapCombat_intOnly<-function(df, ft, groupCol=3, batchCol=4, idCol=1){
     if(idCol !=0 | !is.null(idCol)){
-        idCol<-ifelse(is.character(idCol), colNum(x, idCol), idCol)
+        idCol<-ifelse(is.character(idCol), colNum(df, idCol), idCol)
         idtype<-names(df)[idCol]
         samples<-setdiff(1:ncol(df), idCol)
         row.names(df)<-df[,idCol]
@@ -177,17 +177,33 @@ wrapCombat_intOnly<-function(df, ft, groupCol=3, batchCol=4, idCol=1){
     df
 }
 
+# ComBat introduces negative expression values, re-assign these to the
+# minimum observed value.  This is required for log transformation
+fixCombatNegatives<-function(df, idCol = 1){
+	mpv<-as.numeric(
+		as.matrix(
+			df[,setdiff(1:ncol(df), idCol)]
+		)
+	)
+	mpv<-min(mpv[mpv >0])
+	for(i in setdiff(1:ncol(df), idCol)){
+		df[df[,i]<0,i]<-mpv
+	}
+	df
+}
 
 # EdgeR Pairwise Contrast
 edgeRPairwise<-function(
 	df, ft, idCol=1, sampCol=7, group.dn=c(1,2,3), 
 	group.up=c(4,5,6), groupCol=8
 ){
-	idCol<-ifelse(is.character(idCol), colNum(x, idCol), idCol)
+	print(group.dn)
+	idCol<-ifelse(is.character(idCol), colNum(df, idCol), idCol)
 	if(is.character(group.dn)){
 		group.dn<-as.numeric(row.names((ft[ft[,sampCol]%in% group.dn,])))
 		group.up<-as.numeric(row.names((ft[ft[,sampCol]%in% group.up,])))
 	}
+	
 	if(is.numeric(group.dn)){
 		print(group.dn)
 		gr.dn<-ft[group.dn, sampCol]

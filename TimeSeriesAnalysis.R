@@ -8,48 +8,74 @@
 ############################ Setup Environment #################################
 setwd('/Users/afaranda/Documents/CISC683_Project')
 library(dplyr)
+library(cluster)
 # wd<-getwd()
 source('BuildDataMatrix.R')
 source('PreprocessingFunctions.R')
 source('PrincipalComponents.R')
 source('ClusteringFunctions.R')
+######################### Apply Preprocessing Steps ############################
 
-############## Apply Preprocessing Steps and Evaluate Results ##################
-
+# Add Class attribute to feature definition table
 ft<-raw[[1]]
 ft$Class<-as.factor(paste("Hour",ft$Hours_PCS,sep=""))
-counts<-(raw[[2]][6:nrow(raw[[2]]),])
-# png("RawCounts.png", width=240, height=150)
-	# plotPrinComp(counts, raw[[1]], groupCol=4)
-# dev.off()
+ft$Class<-factor(
+	ft$Class, 
+	levels=unique(
+		as.character(ft$Class[order(ft$Hours_PCS)])
+	)
+)
 
-# Normalize using edgeR's TMM method
-ecpm<-edgeRcpm(counts)
-png("TMM_Normalized.png", width=240, height=150)
-	plotPrinComp(ecpm, raw[[1]], groupCol=4)
-dev.off()
 
-# Filter by variance
-ecpm.filter<-varianceFilter(ecpm, threshold=500)
-png("TMM_Normalized_variance20.png", width=240, height=150)
-	plotPrinComp(ecpm.filter, ft, groupCol=8)
-dev.off()
+counts<-(raw[[2]][6:nrow(raw[[2]]),])      # Extract Raw Counts
+ecpm<-edgeRcpm(counts)                     # Normalize using edgeR's TMM method
+ecmb<-wrapCombat_intOnly(ecpm, ft)         # Correct for batch effects
+ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve
+ecpm.log<-log(ecmb[,2:19])				   # Apply log transformation Combat
 
-# Combat batch effects -- shows some improvement
-ecmb<-wrapCombat(ecpm, ft)
-ecmb.filter<-varianceFilter(ecmb, threshold=500)
-png("ComBat_variance500.png", width=240, height=150)
-	plotPrinComp(ecmb.filter, ft, groupCol=8)
-dev.off()
+############## Apply Variance Filters; Plot Principal Components ###############
+varRanks <-c(10, 50, 100, 200)                # Try different variance filters
+for( v in varRanks){
+	print(v)
+	ecpm.filter <-varianceFilter(ecpm, threshold=v)
+	ecmb.filter <-varianceFilter(ecmb, threshold=v)
+	
+	# Plot results for TMM Normalized Data
+	f1<-paste('ECPM_Samples_Top_', v,'_Ranked_Class.png')
+	f2<-paste('ECPM_Samples_Top_', v,'_Ranked_Lab.png')
+	png(f1, width=240, height=150)
+		print(plotPrinComp(ecpm.filter, ft, groupCol=8, idCol=1))
+	dev.off()
+	png(f2, width=240, height=150)
+		print(plotPrinComp(ecpm.filter, ft, groupCol=4, idCol=1))
+	dev.off()
 
-# Combat batch effects use intercept only 
-ecmb<-wrapCombat_intOnly(ecpm, ft)
-ecmb.filter<-varianceFilter(ecmb, threshold=500)
-png("ComBat_IntOnly_variance500.png", width=240, height=150)
-	plotPrinComp(ecmb.filter, ft, groupCol=8, legendTitle="Interval")
-dev.off()
+	# Plot results for batch adjusted TMM data
+	f1<-paste('ECMB_Samples_Top_', v,'_Ranked_Class.png')
+	f2<-paste('ECMB_Samples_Top_', v,'_Ranked_Lab.png')
+	png(f1, width=240, height=150)
+		print(plotPrinComp(ecmb.filter, ft, groupCol=8, idCol=1))
+	dev.off()
+	png(f2, width=240, height=150)
+		print(plotPrinComp(ecmb.filter, ft, groupCol=4, idCol=1))
+	dev.off()
+}
 
-# Add 1 and log transform to facilitate heat map
+############ Analyze Sample Clusters at desired Variance Threshold #############
+distm <-c('euclidean', 'manhattan')			  # Try different distance methods
+linkm <-c('complete', 'average', 'single')    # Try different linkage methods
+trees <-c(1,2,3,4,5,6)                          # Different levels k
+v = 50
+ecpm.filter<-varianceFilter(ecpm, threshold=v)
+ecmb.filter<-varianceFilter(ecmb, threshold=v)
+
+clustStats<-rbind(
+	summarizeSampleClusters(data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'),
+	summarizeSampleClusters(data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb')
+)
+
+
+
 # for(i in 2:ncol(ecmb.filter)){
 	# ecmb.filter[ecmb.filter[,i] < 0, i] <-1
 # }
@@ -57,34 +83,22 @@ dev.off()
 
 # Try several different methods -- get a range of values
 # Tabulate Cluster statistics for each method attempted. 
-h<-wrapHclust(ecmb.filter, ft,d.meth='minkowski', h.method = "median", d.p=0.2)
+h<-wrapHclust(ecpm.filter, idCol=1, transpose=T, d.meth='manhattan', h.method = "complete", d.p=0.2)
+h<-wrapHclust(ecmb.filter, idCol=1, transpose=T, d.meth='euclidean', h.method = "complete", d.p=0.2)
+
+
+h<-wrapHclust(log(ecmb.filter[,2:19]), idCol=0, transpose=T, d.meth='maximum', h.method = "average", d.p=0.2)
+h<-wrapHclust(log(ecmb.filter[,2:19]), idCol=0, transpose=T, d.meth='euclidean', h.method = "complete", d.p=0.2)
+
+
 plotHclust(h, ft)
-tabulate_H_Clusters(h, ft)
+ktable<-tabulate_H_Clusters(h, ks=1:10)
+ktable$Truth<-sapply(row.names(ktable), function(x) ft[ft$Sample_Number == x,'Class'])
 
 
-# Try some Bi-Clustering -- not looking good with variance filtered gene
-mat<-as.matrix(log(ecmb.filter[,2:ncol(ecmb.filter)]))
-
-mat.dbi<-mat[,1:9]
-mat
-res<-biclust(t(mat.dbi), method=BCCC(), delta=2.2, alpha=1.8)
-
-res<-biclust(mat.dbi, method=BCPlaid())
-res<-biclust(t(mat), method=BCSpectral())
 
 
 # Try to get differentially expressed genes and use that to guide analysis
-# deg_master<-data.frame(
-	# Lab = character(),
-	# DownGroup = character(),
-	# UpGroup = character(),
-	# genes = character(),
-	# logFC = numeric(),
-	# logCPM = numeric(),
-	# PValue = numeric(),
-	# FDR = numeric()
-# )
-# deg_master[1,]<-c("DROP", NA, NA, NA, NA, NA, NA, NA)
 dbi.contrasts <-list(c("Hour0", "Hour24"), c("Hour0", "Hour48"), c("Hour24", "Hour48"))
 dna.contrasts <-list(c("Hour0", "Hour6"), c("Hour0", "Hour24"), c("Hour6", "Hour24"))
 for( i in unique(ft$Seq_Lab)){
@@ -96,7 +110,7 @@ for( i in unique(ft$Seq_Lab)){
 			deg$Lab <- i
 			deg$DownGroup = j[1]
 			deg$UpGroup = j[2]
-			if(!exists('deg_master')){ rm(deg_master); deg_master<-deg}
+			if(!exists('deg_master')){ deg_master<-deg}
 			else{deg_master<-rbind(deg_master, deg)}
 		}
 	}
@@ -108,7 +122,7 @@ for( i in unique(ft$Seq_Lab)){
 			deg$Lab <- i
 			deg$DownGroup = j[1]
 			deg$UpGroup = j[2]
-			if(!exists('deg_master')){rm(deg_master); deg_master<-deg}
+			if(!exists('deg_master')){deg_master<-deg}
 			else{deg_master<-rbind(deg_master, deg)}
 		
 		}
@@ -118,34 +132,74 @@ for( i in unique(ft$Seq_Lab)){
 
 # Get DBI Degs -- Try Clustering Biclustering -- not much better
 deg_master %>%
-	filter(FDR < 0.05, abs(logFC) > 0.5) %>%
+	filter(FDR < 0.05, abs(logFC) > 1) %>%
 	group_by(Lab, DownGroup, UpGroup) %>%
 	summarize(n(), Upregulated=sum(logFC > 1), Downregulated=sum(logFC < 1))
 
 # Get Genes that are significant in DBI based on pairwise contrasts
 dbi.gl<-inner_join(
 	deg_master %>% 
-	filter(FDR < 0.05, abs(logFC) > 0.6) %>%
+	filter(FDR < 0.05, abs(logFC) > 1) %>%
 	filter(DownGroup == 'Hour0', UpGroup == 'Hour24', Lab=='DBI') %>%
+	dplyr::select(genes, logFC) %>%
+	rename( H0vsH24_logFC= 'logFC'),
+	
+	deg_master %>% 
+	filter(FDR < 0.05, abs(logFC) > 1) %>%
+	filter(DownGroup == 'Hour24', UpGroup == 'Hour48', Lab=='DBI') %>%
+	dplyr::select(genes, logFC) %>%
+	rename(H24vsH48_logFC = 'logFC'),
+	by='genes'
+)
+
+
+dna.gl<-inner_join(
+	deg_master %>% 
+	filter(FDR < 0.05, abs(logFC) > 1) %>%
+	filter(DownGroup == 'Hour0', UpGroup == 'Hour6', Lab=='DNA') %>%
 	select(genes, logFC) %>%
 	rename( H0vsH24_logFC= 'logFC'),
 	
 	deg_master %>% 
-	filter(FDR < 0.05, abs(logFC) > 0.6) %>%
-	filter(DownGroup == 'Hour24', UpGroup == 'Hour48', Lab=='DBI') %>%
+	filter(FDR < 0.05, abs(logFC) > 1) %>%
+	filter(DownGroup == 'Hour6', UpGroup == 'Hour24', Lab=='DNA') %>%
 	select(genes, logFC) %>%
 	rename(H24vsH48_logFC = 'logFC'),
 	by='genes'
 )
 
-ecpm.filter<-ecpm[ecpm$ID %in% dgl$genes, 1:10]
+##############################################################
+# Note -- Log transformation DRAMATICALLY improves clustering#
+##############################################################
+ecpm.filter<-ecpm[ecpm$ID %in% dbi.gl$genes, 1:10]
 row.names(ecpm.filter)<-ecpm.filter$ID
 ecpm.filter<-ecpm.filter[,2:10]
 mat<-as.matrix(ecpm.filter)
 
-d<-dist(mat)
+h<-wrapHclust(log(mat), d.meth = 'maximum', h.method='single', idCol=0, transpose=F)
+ktable<-tabulate_H_Clusters(h, ks=1:50)
+plotGeneCluster(mat, ktable, k=20, c=1, ft, groupCol=8)
+agnes()
 
-getClusterStat(mat, tabulate_k_means(mat, idCol=0, transpose=F, ks=1:5), k=1)
+# Get Clusters for DNALink Genes - - - - - 
+ecpm.filter<-ecpm[ecpm$ID %in% dna.gl$genes, c(1,11:19)]
+row.names(ecpm.filter)<-ecpm.filter$ID
+ecpm.filter<-ecpm.filter[,2:10]
+mat<-as.matrix(ecpm.filter)
 
+
+ktable<-tabulate_k_means(log(mat), idCol=0, transpose=F, ks=1:20)
+h<-wrapHclust(mat, d.meth = 'manhattan', h.method='complete', idCol=0, transpose=F)
+ktable<-tabulate_H_Clusters(h, ks=1:50)
+plotGeneCluster(mat, ktable, k=20, c=1, ft, groupCol=8)
+
+# Test some Plotting Functions
+l<-plotGeneCluster(mat, ktable, k=20, c=1, ft, groupCol=8)
+
+x<-reshapeClusterTable(mat, ktable, ft, k=20)
+#x$Class<-sapply(x$variable, function(s) ft[ft$Sample_Number == s, 'Class'])
+bp<-ggplot(data=x[x$Cluster %in% c(10),], mapping=aes(x=Class, y=value, color=Class)) + 
+	geom_boxplot() + 
+	facet_grid( . ~Cluster)
 
 

@@ -22,19 +22,22 @@ colNum<-function(df, n){
 }
 
 plotPrinComp<-function(df, ft, idCol=1, groupCol=3, transpose=T, legendTitle=""){
-	idCol<-ifelse(is.character(idCol), colNum(x, idCol), idCol)
+	idCol<-ifelse(is.character(idCol), colNum(df, idCol), idCol)
 	groupCol<-ifelse(is.character(groupCol),
         groupCol,
         names(ft)[groupCol]
     )
-    row.names(df)<-df[,idCol]
-    df<-df[, setdiff(1:ncol(df), idCol)]
+    if(idCol !=0 ){
+	    row.names(df)<-df[,idCol]
+	    df<-df[, setdiff(1:ncol(df), idCol)]
+	}
     if(transpose){
         df<-t(df)
     }
     pca<-prcomp(df, scale=T)
     p<-autoplot(pca, data = ft, colour=groupCol)
     p + labs(colour=legendTitle)
+    p
     
 }
 
