@@ -1,0 +1,419 @@
+
+R version 3.3.3 (2017-03-06) -- "Another Canoe"
+Copyright (C) 2017 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> ################################################################################
+> # File: TimeSeriesAnalysis.R												       #
+> # Purpose: Identify gene clusters that correspond to temporal patterns.		   #
+> # Created: May 1, 2019 														   #
+> # Author: Adam Faranda														   #
+> ################################################################################
+> 
+> ############################ Setup Environment #################################
+> setwd('/Users/afaranda/Documents/CISC683_Project')
+> library(dplyr)
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(cluster)
+> library(reshape2)
+> # wd<-getwd()
+> source('BuildDataMatrix.R')
+[1] "DBI_Trimmed_HTSeq_Count/S1_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S2_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S3_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S4_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S5_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S6_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S7_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S8_trimmed_GeneCount.txt"
+[1] "DBI_Trimmed_HTSeq_Count/S9_trimmed_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_0_hr_1_S1_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_0_hr_2_S2_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_0_hr_3_S3_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_24_hr_1_S6_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_24_hr_2_S7_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_24_hr_3_S8_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_6_hr_1_S4_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_6_hr_2_S5_GeneCount.txt"
+[1] "DNA_Link_HTSeq_Count/WT_6_hr_3_S15_GeneCount.txt"
+> source('PreprocessingFunctions.R')
+Loading required package: limma
+Loading required package: mgcv
+Loading required package: nlme
+
+Attaching package: ‘nlme’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+This is mgcv 1.8-17. For overview type 'help("mgcv-package")'.
+Loading required package: genefilter
+> source('PrincipalComponents.R')
+Loading required package: ggplot2
+> source('ClusteringFunctions.R')
+> ######################### Apply Preprocessing Steps ############################
+> 
+> # Add Class attribute to feature definition table
+> ft<-raw[[1]]
+> ft$Class<-as.factor(paste("Hour",ft$Hours_PCS,sep=""))
+> ft$Class<-factor(
++ 	ft$Class, 
++ 	levels=unique(
++ 		as.character(ft$Class[order(ft$Hours_PCS)])
++ 	)
++ )
+> 
+> 
+> counts<-(raw[[2]][6:nrow(raw[[2]]),])      # Extract Raw Counts
+> ecpm<-edgeRcpm(counts)                     # Normalize using edgeR's TMM method
+                      Sample_1   Sample_2    Sample_3    Sample_4    Sample_5
+ENSMUSG00000000001 105.4392456 84.3082361 102.0522749 121.6683642 105.7481062
+ENSMUSG00000000003   0.1289974  0.1289974   0.1289974   0.1289974   0.1289974
+ENSMUSG00000000028   1.6820278  2.7294152   2.0292619   2.8719092   2.9711116
+ENSMUSG00000000031   0.1289974  0.6490810   0.3881244   3.6285745   1.2043920
+ENSMUSG00000000037   2.9392428  3.5466894   4.7069073   3.3448250   2.6638560
+ENSMUSG00000000049   0.1289974  0.1289974   0.1289974   0.3181637   0.5130669
+                      Sample_6    Sample_7    Sample_8    Sample_9  Sample_10
+ENSMUSG00000000001 137.4806712 132.2457801 107.0228930 128.0758297 77.0282411
+ENSMUSG00000000003   0.1289974   0.1289974   0.1289974   0.1289974  0.1289974
+ENSMUSG00000000028   5.4949229  14.6243431   8.7883967  19.8598256  4.4102097
+ENSMUSG00000000031  12.3024402  22.3407709   2.5422726  16.1413234  0.1289974
+ENSMUSG00000000037   3.5728003   4.6001986   3.3230381   3.6198363  5.5482535
+ENSMUSG00000000049   0.1289974   0.1289974   0.4129121   0.1289974  0.1289974
+                    Sample_11  Sample_12   Sample_13   Sample_14  Sample_15
+ENSMUSG00000000001 82.9917964 72.9480262 101.8066670 107.1926627 95.9394683
+ENSMUSG00000000003  0.1289974  0.1289974   0.1289974   0.1289974  0.1289974
+ENSMUSG00000000028  2.1206689  2.3856718  32.0183714  11.1040477  3.4163517
+ENSMUSG00000000031  0.4995410  0.5142833   0.3713179   0.4933144  1.1894343
+ENSMUSG00000000037  2.6764842  3.2112843   5.2661914   3.0890732  2.8861333
+ENSMUSG00000000049  0.1753154  0.1289974   0.5167102   0.1289974  0.7122377
+                    Sample_16  Sample_17  Sample_18
+ENSMUSG00000000001 53.9305793 67.9177629 93.5169809
+ENSMUSG00000000003  0.1289974  0.1289974  0.1289974
+ENSMUSG00000000028  1.2465377  1.8700510  1.1808331
+ENSMUSG00000000031  0.1289974  0.1289974  0.6549153
+ENSMUSG00000000037  3.8807398  4.4535500  4.5617336
+ENSMUSG00000000049  0.1289974  0.3536495  0.5797841
+> ecmb<-wrapCombat_intOnly(ecpm, ft)         # Correct for batch effects
+Found 2 batches
+Adjusting for 0 covariate(s) or covariate level(s)
+Standardizing Data across genes
+Fitting L/S model and finding priors
+Finding parametric adjustments
+Adjusting the Data
+> ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve
+> ecpm.log<-log(ecmb[,2:19])				   # Apply log transformation Combat
+> 
+> ############## Apply Variance Filters; Plot Principal Components ###############
+> varRanks <-c(10, 50, 100, 200)                # Try different variance filters
+> for( v in varRanks){
++ 	print(v)
++ 	ecpm.filter <-varianceFilter(ecpm, threshold=v)
++ 	ecmb.filter <-varianceFilter(ecmb, threshold=v)
++ 	
++ 	# Plot results for TMM Normalized Data
++ 	f1<-paste('ECPM_Samples_Top_', v,'_Ranked_Class.png')
++ 	f2<-paste('ECPM_Samples_Top_', v,'_Ranked_Lab.png')
++ 	png(f1, width=240, height=150)
++ 		print(plotPrinComp(ecpm.filter, ft, groupCol=8, idCol=1))
++ 	dev.off()
++ 	png(f2, width=240, height=150)
++ 		print(plotPrinComp(ecpm.filter, ft, groupCol=4, idCol=1))
++ 	dev.off()
++ 
++ 	# Plot results for batch adjusted TMM data
++ 	f1<-paste('ECMB_Samples_Top_', v,'_Ranked_Class.png')
++ 	f2<-paste('ECMB_Samples_Top_', v,'_Ranked_Lab.png')
++ 	png(f1, width=240, height=150)
++ 		print(plotPrinComp(ecmb.filter, ft, groupCol=8, idCol=1))
++ 	dev.off()
++ 	png(f2, width=240, height=150)
++ 		print(plotPrinComp(ecmb.filter, ft, groupCol=4, idCol=1))
++ 	dev.off()
++ }
+[1] 10
+[1] 50
+[1] 100
+[1] 200
+> 
+> ############ Analyze Sample Clusters at desired Variance Threshold #############
+> distm <-c('euclidean', 'manhattan')			  # Try different distance methods
+> linkm <-c('complete', 'average', 'single')    # Try different linkage methods
+> trees <-c(1,2,3,4,5,6)                        # Different levels k
+> v =200
+> ecpm.filter<-varianceFilter(ecpm, threshold=v)
+> ecmb.filter<-varianceFilter(ecmb, threshold=v)
+> 
+> clustStats<-rbind(
++ 	summarizeSampleClusters(
++ 		data=ecpm, distm=distm, linkm=linkm, v=v, label='ecpm'
++ 		
++ 	),
++ 	summarizeSampleClusters(
++ 		data=ecmb, distm=distm, linkm=linkm, v=v, label='ecmb'
++ 	)
++ )
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour24 Hour24 Hour24 Hour48 Hour48 Hour48 Hour24
+[11] Hour6  Hour0  Hour0  Hour0  Hour24 Hour6  Hour24 Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.82)"  "9(0.658)"
+[1] "9(0.792)" "6(0.518)" "3(0.251)"
+[1] "3(0.423)" "6(0.426)" "6(0.518)" "3(0.251)"
+[1] "3(0.423)" "6(0.426)" "6(0.342)" "2(0.462)" "1(0)"    
+[1] "3(0.423)" "6(0.426)" "4(0.292)" "2(0.262)" "2(0.27)"  "1(0)"    
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour24 Hour48 Hour24 Hour48 Hour24 Hour48 Hour6 
+[11] Hour24 Hour6  Hour24 Hour6  Hour24 Hour0  Hour0  Hour0 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.82)"  "9(0.658)"
+[1] "9(0.808)" "8(0.515)" "1(0)"    
+[1] "9(0.792)" "6(0.342)" "2(0.462)" "1(0)"    
+[1] "9(0.782)" "4(0.292)" "2(0.262)" "2(0.27)"  "1(0)"    
+[1] "3(0.423)" "6(0.426)" "4(0.292)" "2(0.262)" "2(0.27)"  "1(0)"    
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour24 Hour0  Hour48 Hour24 Hour48 Hour24 Hour48 Hour0  Hour0  Hour6 
+[11] Hour0  Hour0  Hour0  Hour24 Hour6  Hour24 Hour24 Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.82)"  "9(0.658)"
+[1] "9(0.808)" "8(0.515)" "1(0)"    
+[1] "9(0.785)" "3(0.526)" "5(0.067)" "1(0)"    
+[1] "9(0.785)" "3(0.41)"  "3(0.067)" "2(0.399)" "1(0)"    
+[1] "8(0.349)" "1(0)"     "3(0.41)"  "3(0.067)" "2(0.399)" "1(0)"    
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour48 Hour24 Hour24 Hour48 Hour24 Hour48 Hour6 
+[11] Hour24 Hour6  Hour6  Hour0  Hour0  Hour0  Hour24 Hour24
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.687)" "9(0.526)"
+[1] "9(0.647)" "5(0.291)" "4(0.206)"
+[1] "9(0.621)" "3(0.68)"  "2(0.485)" "4(0.051)"
+[1] "3(0.501)" "6(0.546)" "3(0.68)"  "2(0.485)" "4(0.051)"
+[1] "3(0.501)" "6(0.546)" "3(0.659)" "2(0.443)" "3(0.035)" "1(0)"    
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour48 Hour24 Hour24 Hour48 Hour24 Hour48 Hour6 
+[11] Hour24 Hour24 Hour24 Hour0  Hour0  Hour0  Hour6  Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.687)" "9(0.526)"
+[1] "9(0.672)" "8(0.293)" "1(0)"    
+[1] "9(0.653)" "5(0.387)" "3(0.366)" "1(0)"    
+[1] "3(0.501)" "6(0.546)" "5(0.387)" "3(0.366)" "1(0)"    
+[1] "3(0.501)" "6(0.546)" "3(0.574)" "3(0.277)" "1(0)"     "2(0.275)"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour24 Hour48 Hour24 Hour48 Hour24 Hour48 Hour6 
+[11] Hour24 Hour24 Hour24 Hour0  Hour0  Hour0  Hour6  Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "9(0.687)" "9(0.526)"
+[1] "9(0.672)" "8(0.293)" "1(0)"    
+[1] "9(0.653)" "5(0.387)" "3(0.366)" "1(0)"    
+[1] "9(0.631)" "3(0.574)" "3(0.277)" "1(0)"     "2(0.275)"
+[1] "9(0.621)" "3(0.574)" "2(0.298)" "1(0)"     "1(0)"     "2(0.248)"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour0  Hour0  Hour0  Hour24 Hour48 Hour48 Hour24
+[11] Hour24 Hour24 Hour48 Hour6  Hour24 Hour6  Hour24 Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "13(0.489)" "5(0.217)" 
+[1] "13(0.385)" "4(0.282)"  "1(0)"     
+[1] "6(0.28)"  "7(0.398)" "4(0.238)" "1(0)"    
+[1] "6(0.262)" "7(0.36)"  "2(0.186)" "2(0.078)" "1(0)"    
+[1] "6(0.235)" "1(0)"     "6(0.445)" "2(0.169)" "2(0.078)" "1(0)"    
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour6  Hour24 Hour6  Hour24 Hour6  Hour0  Hour24 Hour24 Hour48 Hour24
+[11] Hour48 Hour24 Hour48 Hour0  Hour0  Hour0  Hour0  Hour0 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "17(0.539)" "1(0)"     
+[1] "13(0.385)" "4(0.282)"  "1(0)"     
+[1] "1(0)"      "12(0.278)" "4(0.264)"  "1(0)"     
+[1] "1(0)"      "11(0.191)" "1(0)"      "4(0.258)"  "1(0)"     
+[1] "1(0)"      "11(0.163)" "1(0)"      "2(0.225)"  "2(0.078)"  "1(0)"     
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour6  Hour24 Hour24 Hour6  Hour0  Hour0  Hour24 Hour0  Hour0  Hour0 
+[11] Hour0  Hour48 Hour24 Hour48 Hour24 Hour48 Hour24 Hour6 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "17(0.539)" "1(0)"     
+[1] "16(0.325)" "1(0)"      "1(0)"     
+[1] "15(0.082)" "1(0)"      "1(0)"      "1(0)"     
+[1] "14(0.139)" "1(0)"      "1(0)"      "1(0)"      "1(0)"     
+[1] "12(0.205)" "1(0)"      "2(0.172)"  "1(0)"      "1(0)"      "1(0)"     
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour0  Hour0  Hour0  Hour0  Hour0  Hour0  Hour6  Hour6  Hour6  Hour48
+[11] Hour24 Hour24 Hour48 Hour24 Hour48 Hour24 Hour24 Hour24
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "6(0.514)"  "12(0.212)"
+[1] "6(0.496)" "9(0.366)" "3(0.238)"
+[1] "6(0.444)" "6(0.42)"  "3(0.186)" "3(0.215)"
+[1] "6(0.386)" "6(0.42)"  "3(0.179)" "1(0)"     "2(0.34)" 
+[1] "6(0.386)" "6(0.354)" "2(0.188)" "1(0)"     "1(0)"     "2(0.334)"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour6  Hour48 Hour24 Hour24 Hour48 Hour24 Hour48 Hour24 Hour24 Hour24
+[11] Hour6  Hour6  Hour0  Hour0  Hour0  Hour0  Hour0  Hour0 
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "17(0.344)" "1(0)"     
+[1] "8(0.323)" "9(0.386)" "1(0)"    
+[1] "6(0.397)" "9(0.353)" "1(0)"     "2(0.34)" 
+[1] "6(0.386)" "6(0.42)"  "3(0.179)" "1(0)"     "2(0.34)" 
+[1] "6(0.386)" "6(0.354)" "2(0.188)" "1(0)"     "1(0)"     "2(0.334)"
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+ [1] Hour6  Hour6  Hour6  Hour0  Hour0  Hour0  Hour0  Hour0  Hour0  Hour24
+[11] Hour24 Hour24 Hour24 Hour48 Hour24 Hour48 Hour24 Hour48
+Levels: Hour0 Hour6 Hour24 Hour48
+[1] "17(0.344)" "1(0)"     
+[1] "15(0.112)" "1(0)"      "2(0.349)" 
+[1] "6(0.397)" "9(0.353)" "1(0)"     "2(0.34)" 
+[1] "6(0.336)" "9(0.268)" "1(0)"     "1(0)"     "1(0)"    
+[1] "6(0.336)" "8(0.275)" "1(0)"     "1(0)"     "1(0)"     "1(0)"    
+> 
+> write.csv(clustStats, 'Sample_Cluster_Statistics.csv')
+> 
+> ################# Analyze Gene Clusters at Variance Threshold ####################
+> v = 200
+> ecmb.filter<-varianceFilter(ecmb, threshold=v)
+> row.names(ecmb.filter)<-ecmb.filter$ID
+> mat<-ecmb.filter[,2:ncol(ecpm.filter)]
+> 
+> h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')
+> ktable<-tabulate_H_Clusters(h, ks=1:20)
+[1] 1
+[1] 2
+[1] 3
+[1] 4
+[1] 5
+[1] 6
+[1] 7
+[1] 8
+[1] 9
+[1] 10
+[1] 11
+[1] 12
+[1] 13
+[1] 14
+[1] 15
+[1] 16
+[1] 17
+[1] 18
+[1] 19
+[1] 20
+> ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)
+> 
+> s<-as.data.frame(
++ 	silhouette(cutree(h, 20), dist(log(mat), method='manhattan'))[,1:3]
++ )
+> s.means<-s %>% 
++ 	group_by(cluster) %>%
++ 	summarize(Mean_Silhouette=mean(sil_width))
+> 
+> cstat<-inner_join(
++ 	ct %>% 
++ 		group_by(Cluster) %>%
++ 		summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)),		
++ 	s %>%
++ 		group_by(cluster) %>%
++ 		dplyr::rename(Cluster = cluster) %>%
++ 		summarize(Mean_Silhouette=mean(sil_width)),
++ 		by='Cluster'
++ )
+> write.csv(cstat, 'Gene_Cluster_Stats.csv')
+> 			
+> cl<- cstat %>%
++ 	filter(Count > 3, STDev_logCPM < 1)
+> cl<-cl$Cluster
+> 
+> bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + 
++ 	geom_boxplot() + facet_grid( . ~Cluster)
+> 
+> png('Gene_Cluster_Profiles.png', width=960, height=280)
+> 	print(bp)
+> dev.off()
+null device 
+          1 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+ 54.668   2.621  57.872 
