@@ -238,6 +238,13 @@ edgeRPairwise<-function(
 	return(list(y.filter, degSet))
 }
 
+
+scaleCenterByRow<-function(mat){
+	a<-apply(mat, 1, mean, na.rm=T)
+	s<-apply(mat, 1, sd, na.rm=T)
+	return((mat - a)/s)
+}
+
 x<-data.frame(
 	ID=c('A1','A2','A3','A4','A5','A6','A7','A8','A9','A10'),
 	Samp1=c(100,100,100,100,100,100,100,100,100,100),

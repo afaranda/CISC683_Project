@@ -255,6 +255,61 @@ row.names(data)<-data$ID
  	randTable
 }
 
+summarizeGeneClusters<-function(
+	m=mat, d.meth='manhattan', 
+	h.method='complete', label='foo', 
+	transpose=F, nclust=20, minGenes = 5,
+	clustSD = 2000
+){
+	print('one')
+	h<-wrapHclust(m, idCol=0, transpose=transpose, d.meth=d.meth, h.method=h.method)
+	ktable<-tabulate_H_Clusters(h, ks=1:nclust)
+	print('two')
+	ct<-reshapeClusterTable(m, ktable, ft, k=nclust)
+	print('there')
+	s<-as.data.frame(
+		silhouette(cutree(h, nclust), dist(m, method=d.meth))[,1:3]
+	)
+	s.means<-s %>% 
+		group_by(cluster) %>%
+		summarize(Mean_Silhouette=mean(sil_width))
+	
+	cstat<-inner_join(
+		ct %>% 
+			group_by(Cluster) %>%
+			summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)),		
+		s %>%
+			group_by(cluster) %>%
+			dplyr::rename(Cluster = cluster) %>%
+			summarize(Mean_Silhouette=mean(sil_width)),
+			by='Cluster'
+	)
+	write.csv(cstat, paste(label, '_Gene_Cluster_Stats.csv', sep=''))
+				
+	cl<- cstat %>%
+		filter(Count > minGenes, STDev_logCPM <clustSD)
+	cl<-cl$Cluster
+	
+	bp<-ggplot(data=ct[ct$Cluster %in%cl,], mapping=aes(x=Class, y=value, color=Class)) + 
+		geom_boxplot() + facet_grid( . ~Cluster)
+	
+	png(paste(label,'_Gene_Cluster_Profiles.png',sep=''), width=960, height=280)
+		print(bp)
+	dev.off()
+	
+	png(paste(label,'_Heatmap.png', sep=''))
+		pheatmap(
+			m, clustering_distance_cols=d.meth, 
+			clustering_distance_rows=d.meth,
+			clustering_method=h.method,
+			scale='none'
+		)
+	dev.off()
+		return(list(cstat, bp))
+}
+
+
+
 
 
 

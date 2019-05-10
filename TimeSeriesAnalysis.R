@@ -6,7 +6,7 @@
 ################################################################################
 
 ############################ Setup Environment #################################
-setwd('/Users/afaranda/Documents/CISC683_Project')
+setwd('/Users/afaranda/Documents/CISC683_Project_Report')
 library(dplyr)
 library(cluster)
 library(reshape2)
@@ -32,7 +32,7 @@ counts<-(raw[[2]][6:nrow(raw[[2]]),])      # Extract Raw Counts
 ecpm<-edgeRcpm(counts)                     # Normalize using edgeR's TMM method
 ecmb<-wrapCombat_intOnly(ecpm, ft)         # Correct for batch effects
 ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve
-ecpm.log<-log(ecmb[,2:19])				   # Apply log transformation Combat
+
 
 ############## Apply Variance Filters; Plot Principal Components ###############
 varRanks <-c(10, 50, 100, 200)                # Try different variance filters
@@ -85,40 +85,23 @@ write.csv(clustStats, 'Sample_Cluster_Statistics.csv')
 ################# Analyze Gene Clusters at Variance Threshold ####################
 v = 200
 ecmb.filter<-varianceFilter(ecmb, threshold=v)
-row.names(ecmb.filter)<-ecmb.filter$ID
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]
+mat<-as.matrix(ecmb.filter[,2:ncol(ecmb.filter)])
+mat.l<-log(mat)
+mat.s<-scaleCenterByRow(mat)
 
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')
-ktable<-tabulate_H_Clusters(h, ks=1:20)
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)
+d.meth='manhattan'
+h.method='complete'
 
-s<-as.data.frame(
-	silhouette(cutree(h, 20), dist(log(mat), method='manhattan'))[,1:3]
-)
-s.means<-s %>% 
-	group_by(cluster) %>%
-	summarize(Mean_Silhouette=mean(sil_width))
+summarizeGeneClusters(mat.s, label='Scaled_Centered_v200')
 
-cstat<-inner_join(
-	ct %>% 
-		group_by(Cluster) %>%
-		summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)),		
-	s %>%
-		group_by(cluster) %>%
-		dplyr::rename(Cluster = cluster) %>%
-		summarize(Mean_Silhouette=mean(sil_width)),
-		by='Cluster'
-)
-write.csv(cstat, 'Gene_Cluster_Stats.csv')
-			
-cl<- cstat %>%
-	filter(Count > 3, STDev_logCPM < 1)
-cl<-cl$Cluster
 
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + 
-	geom_boxplot() + facet_grid( . ~Cluster)
+v = 2000
+ecmb.filter<-varianceFilter(ecmb, threshold=v)
+mat<-as.matrix(ecmb.filter[,2:ncol(ecmb.filter)])
+mat.l<-log(mat)
+mat.s<-scaleCenterByRow(mat)
+summarizeGeneClusters(mat.s, label='Scaled_Centered_v200')
 
-png('Gene_Cluster_Profiles.png', width=960, height=280)
-	print(bp)
-dev.off()
+
+
 

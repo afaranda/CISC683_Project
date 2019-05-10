@@ -1,28 +1,3 @@
-y
-x<-c(c("GeneID", "FC"), y)
-x
-z<-c("GeneID", "ensmebl_gene_id", "description")
-R
-x<-data.frame(a=c(1,2,3), b=c(4,5,6))
-x
-names(x)
-names(x) - "b"
-names(x) + "b"
-setdiff(names(x), "b")
-x<-data.frame(a=c(1,2,3), b=c(4,5,6), c=c(7,8,9), d=c(10,11,12))
-x
-x<-x[,setdiff(names(x, "b"))]
-x<-x[,setdiff(names(x), "b"))]
-x<-x[,setdiff(names(x), "b")]
-x
-print(paste("hello \n", "goodbye"))
-rpois(25,10)
-rpois(10, 25)
-rnbinom
-rnbinom(25,10)
-rnbinom(25,10, 0.5)
-sample(rpois(25,1000), 10)
-sample(rpois(1000, 25), 10)
 Age = sample(c(rpois(1000, 25), rpois(1000, 45), rpois(1000, 65)), 1000)
 Age
 plot(Age)
@@ -449,6 +424,21 @@ si<-silhouette(pr4)
 plot(si)
 si<-silhouette(pr4)
 ?pam
+library(edgeR)
+edgeR
+library(edgeR, verbose=T)
+session.info()
+sessionInfo
+sessionInfo()
+library(dplyr)
+library(reshape2)
+library(cluster)
+library(sva)
+session.info()
+sessionInfo()
+ComBat()
+library(topGO)
+ls()
 setwd('/Users/afaranda/Documents/CISC683_Project')#
 library(dplyr)#
 library(cluster)#
@@ -457,7 +447,10 @@ library(reshape2)#
 source('BuildDataMatrix.R')#
 source('PreprocessingFunctions.R')#
 source('PrincipalComponents.R')#
-source('ClusteringFunctions.R')
+source('ClusteringFunctions.R')#
+######################### Apply Preprocessing Steps #############################
+#
+# Add Class attribute to feature definition table#
 ft<-raw[[1]]#
 ft$Class<-as.factor(paste("Hour",ft$Hours_PCS,sep=""))#
 ft$Class<-factor(#
@@ -469,7 +462,10 @@ ft$Class<-factor(#
 counts<-(raw[[2]][6:nrow(raw[[2]]),])      # Extract Raw Counts#
 ecpm<-edgeRcpm(counts)                     # Normalize using edgeR's TMM method#
 ecmb<-wrapCombat_intOnly(ecpm, ft)         # Correct for batch effects#
-ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve
+ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve#
+ecpm.log<-log(ecmb[,2:19])				   # Apply log transformation Combat#
+#
+############## Apply Variance Filters; Plot Principal Components ################
 varRanks <-c(10, 50, 100, 200)                # Try different variance filters#
 for( v in varRanks){#
 	print(v)#
@@ -494,568 +490,289 @@ for( v in varRanks){#
 	png(f2, width=240, height=150)#
 		print(plotPrinComp(ecmb.filter, ft, groupCol=4, idCol=1))#
 	dev.off()#
-}
-summarizeSampleClusters<-function(data=ecpm, distm, linkm, v=50, label='ecpm'){#
-ecpm.filter<-varianceFilter(data, threshold=v)#
-	for(d in distm){#
-		for(l in linkm){#
-			f1<-paste(label,'_Samples_Top_', v,'_',d,'_',l,'_cluster.png')#
-			mat<-log(ecpm.filter[,2:19])#
-			h1<-wrapHclust(mat, #
-				idCol=0, transpose=T, d.meth=d, h.method = l#
-			)#
-			kt1<-tabulate_H_Clusters(h1, ks = trees)#
-			kt1$I<-row.names(kt1)#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Class'])#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Seq_Lab'])#
-			png(f1, width=240, height=600)#
-				plotHclust(h1, ft, sampleCol=7, labelCol=8, colorCol=4, main='')#
-			dev.off()#
-			for(t in trees){#
-				r<-randIndex(kt1, length(trees)+1, t, length(trees)+2)#
-				if(t > 1){#
-					sil<-as.data.frame(#
-						silhouette(#
-							cutree(h1, t), #
-							dist(t(mat), method= d)#
-						)[,1:3]#
-					)#
-					sm<-mean(sil$sil_width)#
-					sil<-sil %>% #
-						group_by(cluster) %>%#
-						summarize( mean(sil_width), n())#
-					slist<-paste(sil$`n()`, '(',round(sil$`mean(sil_width)`,3),')',sep='')#
-					print(slist)#
-				}#
-				else{ #
-					sm<-0#
-					slist<-"None"#
-				}#
-				if(!exists('randTable')){#
-					randTable<-data.frame(#
-						Data = label,#
-						DistMethod = d,#
-						LinkMethod = l,#
-						NumClusters= t,#
-						RandIndex = r,#
-						MeanSilhouette=sm, #
-						ClusterSilhouettes=paste(slist, collapse=', '),#
-						stringsAsFactors=F#
-					)#
-				}#
-				else{#
-					randTable<-rbind(#
-						randTable, #
-						data.frame(#
-							Data = 'ecpm',#
-							DistMethod = d,#
-							LinkMethod = l,#
-							NumClusters= t,#
-							RandIndex = r,#
-							MeanSilhouette=sm, #
-							ClusterSilhouettes=paste(slist, collapse=', '),#
-							stringsAsFactors=F#
-						)#
-					)#
-				}#
-			}#
-		}#
-	}#
- 	randTable#
-}
-clustStats<-rbind(#
-	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
-	),#
-	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
-	)#
-)
-distm
+}#
+#
+############ Analyze Sample Clusters at desired Variance Threshold ##############
 distm <-c('euclidean', 'manhattan')			  # Try different distance methods#
 linkm <-c('complete', 'average', 'single')    # Try different linkage methods#
-trees <-c(1,2,3,4,5,6)                          # Different levels k#
-v = 50#
+trees <-c(1,2,3,4,5,6)                        # Different levels k#
+v =200#
 ecpm.filter<-varianceFilter(ecpm, threshold=v)#
 ecmb.filter<-varianceFilter(ecmb, threshold=v)#
 #
 clustStats<-rbind(#
 	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
+		data=ecpm, distm=distm, linkm=linkm, v=v, label='ecpm'#
 	),#
 	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
+		data=ecmb, distm=distm, linkm=linkm, v=v, label='ecmb'#
 	)#
 )#
 #
 write.csv(clustStats, 'Sample_Cluster_Statistics.csv')
-distm
+setwd('/Users/afaranda/Documents/CISC683_Project')
+setwd('/Users/afaranda/Documents/CISC683_Project_Report')
+library(dplyr)#
+library(cluster)#
+library(reshape2)#
+# wd<-getwd()#
+source('BuildDataMatrix.R')#
+source('PreprocessingFunctions.R')#
+source('PrincipalComponents.R')#
+source('ClusteringFunctions.R')#
+######################### Apply Preprocessing Steps #############################
+#
+# Add Class attribute to feature definition table#
+ft<-raw[[1]]#
+ft$Class<-as.factor(paste("Hour",ft$Hours_PCS,sep=""))#
+ft$Class<-factor(#
+	ft$Class, #
+	levels=unique(#
+		as.character(ft$Class[order(ft$Hours_PCS)])#
+	)#
+)#
+counts<-(raw[[2]][6:nrow(raw[[2]]),])      # Extract Raw Counts#
+ecpm<-edgeRcpm(counts)                     # Normalize using edgeR's TMM method#
+ecmb<-wrapCombat_intOnly(ecpm, ft)         # Correct for batch effects#
+ecmb<-fixCombatNegatives(ecmb)             # replace negative values with min +ve#
+ecpm.log<-log(ecmb[,2:19])				   # Apply log transformation Combat#
+#
+############## Apply Variance Filters; Plot Principal Components ################
+varRanks <-c(10, 50, 100, 200)                # Try different variance filters#
+for( v in varRanks){#
+	print(v)#
+	ecpm.filter <-varianceFilter(ecpm, threshold=v)#
+	ecmb.filter <-varianceFilter(ecmb, threshold=v)#
+	# Plot results for TMM Normalized Data#
+	f1<-paste('ECPM_Samples_Top_', v,'_Ranked_Class.png')#
+	f2<-paste('ECPM_Samples_Top_', v,'_Ranked_Lab.png')#
+	png(f1, width=240, height=150)#
+		print(plotPrinComp(ecpm.filter, ft, groupCol=8, idCol=1))#
+	dev.off()#
+	png(f2, width=240, height=150)#
+		print(plotPrinComp(ecpm.filter, ft, groupCol=4, idCol=1))#
+	dev.off()#
+#
+	# Plot results for batch adjusted TMM data#
+	f1<-paste('ECMB_Samples_Top_', v,'_Ranked_Class.png')#
+	f2<-paste('ECMB_Samples_Top_', v,'_Ranked_Lab.png')#
+	png(f1, width=240, height=150)#
+		print(plotPrinComp(ecmb.filter, ft, groupCol=8, idCol=1))#
+	dev.off()#
+	png(f2, width=240, height=150)#
+		print(plotPrinComp(ecmb.filter, ft, groupCol=4, idCol=1))#
+	dev.off()#
+}#
+#
+############ Analyze Sample Clusters at desired Variance Threshold ##############
 distm <-c('euclidean', 'manhattan')			  # Try different distance methods#
 linkm <-c('complete', 'average', 'single')    # Try different linkage methods#
-trees <-c(1,2,3,4,5,6)                          # Different levels k#
-v = 50#
+trees <-c(1,2,3,4,5,6)                        # Different levels k#
+v =200#
 ecpm.filter<-varianceFilter(ecpm, threshold=v)#
 ecmb.filter<-varianceFilter(ecmb, threshold=v)#
 #
 clustStats<-rbind(#
 	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
+		data=ecpm, distm=distm, linkm=linkm, v=v, label='ecpm'#
 	),#
 	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
+		data=ecmb, distm=distm, linkm=linkm, v=v, label='ecmb'#
 	)#
 )#
 #
-write.csv(clustStats, 'Sample_Cluster_Statistics.csv')
-summarizeSampleClusters<-function(data=ecpm, distm, linkm, v=50, label='ecpm'){#
-ecpm.filter<-varianceFilter(data, threshold=v)#
-	for(d in distm){#
-		for(l in linkm){#
-			f1<-paste(label,'_Samples_Top_', v,'_',d,'_',l,'_cluster.png')#
-			mat<-log(ecpm.filter[,2:19])#
-			h1<-wrapHclust(mat, #
-				idCol=0, transpose=T, d.meth=d, h.method = l#
-			)#
-			kt1<-tabulate_H_Clusters(h1, ks = trees)#
-			kt1$I<-row.names(kt1)#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Class'])#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Seq_Lab'])#
-			png(f1, width=240, height=300)#
-				plotHclust(h1, ft, sampleCol=7, labelCol=8, colorCol=4, main='')#
-			dev.off()#
-			for(t in trees){#
-				r<-randIndex(kt1, length(trees)+1, t, length(trees)+2)#
-				if(t > 1){#
-					sil<-as.data.frame(#
-						silhouette(#
-							cutree(h1, t), #
-							dist(t(mat), method= d)#
-						)[,1:3]#
-					)#
-					sm<-mean(sil$sil_width)#
-					sil<-sil %>% #
-						group_by(cluster) %>%#
-						summarize( mean(sil_width), n())#
-					slist<-paste(sil$`n()`, '(',round(sil$`mean(sil_width)`,3),')',sep='')#
-					print(slist)#
-				}#
-				else{ #
-					sm<-0#
-					slist<-"None"#
-				}#
-				if(!exists('randTable')){#
-					randTable<-data.frame(#
-						Data = label,#
-						DistMethod = d,#
-						LinkMethod = l,#
-						NumClusters= t,#
-						RandIndex = r,#
-						MeanSilhouette=sm, #
-						ClusterSilhouettes=paste(slist, collapse=', '),#
-						stringsAsFactors=F#
-					)#
-				}#
-				else{#
-					randTable<-rbind(#
-						randTable, #
-						data.frame(#
-							Data = 'ecpm',#
-							DistMethod = d,#
-							LinkMethod = l,#
-							NumClusters= t,#
-							RandIndex = r,#
-							MeanSilhouette=sm, #
-							ClusterSilhouettes=paste(slist, collapse=', '),#
-							stringsAsFactors=F#
-						)#
-					)#
-				}#
-			}#
-		}#
-	}#
- 	randTable#
-}
-clustStats<-rbind(#
-	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
-	),#
-	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
-	)#
-)
-distm <-c('euclidean', 'manhattan')			  # Try different distance methods#
-linkm <-c('complete', 'average', 'single')    # Try different linkage methods#
-trees <-c(1,2,3,4,5,6)                          # Different levels k#
-v = 200#
-ecpm.filter<-varianceFilter(ecpm, threshold=v)#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
+write.csv(clustStats, 'Sample_Cluster_Statistics.csv')#
 #
-clustStats<-rbind(#
-	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
-	),#
-	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
-	)#
-)
-summarizeSampleClusters<-function(data=ecpm, distm, linkm, v=50, label='ecpm'){#
-data<-varianceFilter(data, threshold=v)#
-row.names(data)<-data$ID#
-	for(d in distm){#
-		for(l in linkm){#
-			f1<-paste(label,'_Samples_Top_', v,'_',d,'_',l,'_cluster.png')#
-			mat<-data[,2:19]#
-			h1<-wrapHclust(mat, #
-				idCol=0, transpose=T, d.meth=d, h.method = l#
-			)#
-			kt1<-tabulate_H_Clusters(h1, ks = trees)#
-			kt1$I<-row.names(kt1)#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Class'])#
-			kt1$TC<-sapply(kt1$I, function(i) ft[ft$Sample_Number ==i, 'Seq_Lab'])#
-			png(f1, width=240, height=300)#
-				plotHclust(h1, ft, sampleCol=7, labelCol=8, colorCol=4, main='')#
-			dev.off()#
-			for(t in trees){#
-				r<-randIndex(kt1, length(trees)+1, t, length(trees)+2)#
-				if(t > 1){#
-					sil<-as.data.frame(#
-						silhouette(#
-							cutree(h1, t), #
-							dist(t(mat), method= d)#
-						)[,1:3]#
-					)#
-					sm<-mean(sil$sil_width)#
-					sil<-sil %>% #
-						group_by(cluster) %>%#
-						summarize( mean(sil_width), n())#
-					slist<-paste(sil$`n()`, '(',round(sil$`mean(sil_width)`,3),')',sep='')#
-					print(slist)#
-				}#
-				else{ #
-					sm<-0#
-					slist<-"None"#
-				}#
-				if(!exists('randTable')){#
-					randTable<-data.frame(#
-						Data = label,#
-						DistMethod = d,#
-						LinkMethod = l,#
-						NumClusters= t,#
-						RandIndex = r,#
-						MeanSilhouette=sm, #
-						ClusterSilhouettes=paste(slist, collapse=', '),#
-						stringsAsFactors=F#
-					)#
-				}#
-				else{#
-					randTable<-rbind(#
-						randTable, #
-						data.frame(#
-							Data = 'ecpm',#
-							DistMethod = d,#
-							LinkMethod = l,#
-							NumClusters= t,#
-							RandIndex = r,#
-							MeanSilhouette=sm, #
-							ClusterSilhouettes=paste(slist, collapse=', '),#
-							stringsAsFactors=F#
-						)#
-					)#
-				}#
-			}#
-		}#
-	}#
- 	randTable#
-}
-distm <-c('euclidean', 'manhattan')			  # Try different distance methods#
-linkm <-c('complete', 'average', 'single')    # Try different linkage methods#
-trees <-c(1,2,3,4,5,6)                          # Different levels k#
-v = 200#
-ecpm.filter<-varianceFilter(ecpm, threshold=v)#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-#
-clustStats<-rbind(#
-	summarizeSampleClusters(#
-		data=ecpm, distm=distm, linkm=linkm, v=50, label='ecpm'#
-	),#
-	summarizeSampleClusters(#
-		data=ecmb, distm=distm, linkm=linkm, v=50, label='ecmb'#
-	)#
-)
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=10)
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:10)
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=10)
-head(ct)
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n(), Mean_logCPM=mean(value))
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/9, Mean_logCPM=mean(value))
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/12, Mean_logCPM=mean(value))
-head(ct)
-ct %>% filter(Cluster = 9)
-ct %>% filter(Cluster == 9)
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value))
-table<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value))
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), sd(value)) %>%#
-	filter(Count > 5)
-cl<-c(61,3,4,7,9,13,18)
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)
-bp
-cl<-c(1,3,4,7,9,13,18)
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)
-bp
-v = 500#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)
-v = 500#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), sd(value)) %>%#
-	filter(Count > 5)
-bp<-ggplot(data=ct[ct$Cluster %in% 1:20,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)
-bp
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5)#
-cl<-c(1,3,5,8,9,13,18)
-cl
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5)#
-cl<-c(1,3,5,8,9,13,18)
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster
-cl
-bp
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='average')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='single')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-################# Analyze Gene Clusters Based on Variance #######################
-v = 500#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='single')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-v = 500#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='maximum')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-v = 500#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-v = 50#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-v = 200#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
-v = 1000#
-ecmb.filter<-varianceFilter(ecmb, threshold=v)#
-row.names(ecmb.filter)<-ecmb.filter$ID#
-mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
-#
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
-ktable<-tabulate_H_Clusters(h, ks=1:20)#
-ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
-#
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
-cl<-cl$Cluster#
-#
-bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
-	geom_boxplot() + facet_grid( . ~Cluster)#
-bp
+################# Analyze Gene Clusters at Variance Threshold #####################
 v = 2000#
 ecmb.filter<-varianceFilter(ecmb, threshold=v)#
 row.names(ecmb.filter)<-ecmb.filter$ID#
 mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
 #
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
+h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')#
 ktable<-tabulate_H_Clusters(h, ks=1:20)#
 ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
 #
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
+s<-as.data.frame(#
+	silhouette(cutree(h, 20), dist(log(mat), method='manhattan'))[,1:3]#
+)#
+s.means<-s %>% #
+	group_by(cluster) %>%#
+	summarize(Mean_Silhouette=mean(sil_width))#
+#
+cstat<-inner_join(#
+	ct %>% #
+		group_by(Cluster) %>%#
+		summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)),		#
+	s %>%#
+		group_by(cluster) %>%#
+		dplyr::rename(Cluster = cluster) %>%#
+		summarize(Mean_Silhouette=mean(sil_width)),#
+		by='Cluster'#
+)#
+write.csv(cstat, 'Gene_Cluster_Stats.csv')#
+cl<- cstat %>%#
+	filter(Count > 25, STDev_logCPM < 30)#
 cl<-cl$Cluster#
 #
 bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
 	geom_boxplot() + facet_grid( . ~Cluster)#
+#
+png('Gene_Cluster_Profiles.png', width=960, height=280)#
+	print(bp)#
+dev.off()#
 bp
-v = 500#
+head(mat)
+x<-1:3*1:3
+x
+1:3
+rep(1:3, 3)
+rep(1:3, 3)*1:3
+rep(1:3, 3)* rep(1:3, each=3)
+x<-rep(1:3, 3)* rep(1:3, each=3)
+x<-as.matrix(x, c(3,3))
+x
+x<-as.matrix(x, nrow=3,ncol3)
+x
+x<-as.matrix(x, nrow=3)
+x
+dim(x)<-c(3,3)
+x
+apply(x, 1, sd)
+y<-apply(x, 1, sd)
+y
+x*y
+x/y
+x*y
+x/y
+as.data.frame(x)/y
+a<-apply(mat, 1, mean)
+s<-apply(mat, 1, sd)
+mat.c<-mat - a
+head(mat.c)
+length(a)
+mat.cs<-mat / s
+head(mat.cs)
+mat.cs<-mat.c / s
+head(mat.cs)
+h<-wrapHclust(log(mat.cs), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')
+s<-apply(mat, 1, sd)
+mat.c<-mat / s
+h<-wrapHclust(log(mat.s), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')
+mat.s<-mat / s
+h<-wrapHclust(log(mat.s), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')
+ktable<-tabulate_H_Clusters(h, ks=1:20)
+ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)
+head(ct)
+s<-as.data.frame(#
+	silhouette(cutree(h, 20), dist(log(mat), method='manhattan'))[,1:3]#
+)
+s
+s<-as.data.frame(#
+	silhouette(cutree(h, 20), dist(log(mat.s), method='manhattan'))[,1:3]#
+)
+s
+l<- cstat %>%#
+	filter(Count > 25, STDev_logCPM < 30)
+cl<- cstat %>%#
+	filter(Count > 25, STDev_logCPM < 30)
+cl
+bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
+	geom_boxplot() + facet_grid( . ~Cluster)
+bp
+head(ct)
+cl
+cl<-cl$Cluster
+bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
+	geom_boxplot() + facet_grid( . ~Cluster)
+bp
+v = 200#
 ecmb.filter<-varianceFilter(ecmb, threshold=v)#
 row.names(ecmb.filter)<-ecmb.filter$ID#
 mat<-ecmb.filter[,2:ncol(ecpm.filter)]#
 #
-h<-wrapHclust(log(mat), idCol=0, transpose=F, d.meth='euclidean', h.method='complete')#
+a<-apply(mat, 1, mean)#
+s<-apply(mat, 1, sd)#
+mat.c<-mat - a#
+mat.s<-mat / s#
+#
+x<-rep(1:3, 3)* rep(1:3, each=3)#
+x<-as.matrix(x, nrow=3)#
+#
+h<-wrapHclust(log(mat.s), idCol=0, transpose=F, d.meth='manhattan', h.method='complete')#
 ktable<-tabulate_H_Clusters(h, ks=1:20)#
 ct<-reshapeClusterTable(log(mat), ktable, ft, k=20)#
 #
-cl<-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)#
+s<-as.data.frame(#
+	silhouette(cutree(h, 20), dist(log(mat.s), method='manhattan'))[,1:3]#
+)#
+s.means<-s %>% #
+	group_by(cluster) %>%#
+	summarize(Mean_Silhouette=mean(sil_width))#
+#
+cstat<-inner_join(#
+	ct %>% #
+		group_by(Cluster) %>%#
+		summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)),		#
+	s %>%#
+		group_by(cluster) %>%#
+		dplyr::rename(Cluster = cluster) %>%#
+		summarize(Mean_Silhouette=mean(sil_width)),#
+		by='Cluster'#
+)#
+write.csv(cstat, 'Gene_Cluster_Stats.csv')#
+cl<- cstat %>%#
+	filter(Count > 5, STDev_logCPM < 30)#
 cl<-cl$Cluster#
 #
 bp<-ggplot(data=ct[ct$Cluster %in% cl,], mapping=aes(x=Class, y=value, color=Class)) + #
 	geom_boxplot() + facet_grid( . ~Cluster)#
+#
+png('Gene_Cluster_Profiles.png', width=960, height=280)#
+	print(bp)#
+dev.off()#
 bp
-ct %>% #
-	group_by(Cluster) %>%#
-	summarize(Count = n()/18, Mean_logCPM=mean(value), STDev_logCPM = sd(value)) %>%#
-	filter(Count > 5, STDev_logCPM < 1)
+cstat
+print( row.names=F, #
+	cstat %>% filter( Cluster == 3) %>% #
+	group_by(ID) %>%#
+	dplyr::select(ID)#
+)
+head(cstat)
+head(ct)
+print( row.names=F, #
+	ct %>% filter( Cluster == 3) %>% #
+	group_by(ID) %>%#
+	dplyr::select(ID)#
+)
+print( row.names=F,#
+	as.data.frame(#
+		ct %>% filter( Cluster == 3) %>% #
+		group_by(ID) %>%#
+		dplyr::select(ID)#
+	)#
+)
+print( row.names=F,#
+	as.data.frame(#
+		ct %>% filter( Cluster == 3) %>% #
+		group_by(ID) %>%#
+		dplyr::select(ID) %>%#
+		summarize(ID)#
+	)#
+)
+print( row.names=F,#
+	as.data.frame(#
+		ct %>% filter( Cluster == 3) %>% #
+		group_by(ID) %>%#
+		dplyr::select(ID) %>%#
+		summarize(n())#
+	)#
+)
+print( row.names=F,#
+	as.data.frame(#
+		ct %>% filter( Cluster == 3) %>% #
+		group_by(ID) %>%#
+		summarize(n()) %>%#
+		dplyr::select(ID)#
+	)#
+)
